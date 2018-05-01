@@ -26,14 +26,174 @@ end PATTERNCHECKGAME_CTRL;
 
 architecture BEHAVE of PATTERNCHECKGAME_CTRL is
 begin
--- this code should normally be overwritten by STDE, our XFSA drawing tool.
--- the following is only inserted to allow archiving      
+    process(RESET, CLK, PATTERN, TIMEOVER, KEY1, KEY2) is
+        -- DEFINE A STATE-TYPE
+        type TSTATE is(
+            START,    -- 
+            PHASE1,   -- 
+            PHASE1_1, -- 
+            PHASE2,   -- 
+            PHASE3,   -- 
+            ENDE,     -- 
+            PHASE3_1, -- 
+            PHASE3_2, -- 
+            MAX       -- 
+        );
+        variable STATE : TSTATE;
+        -- VARIABLES
+        variable MAXLV : unsigned(3 downto 0);                -- Maximal Level reached
+        variable PT_S  : std_logic_vector(3 downto 0);        -- Pattern searched
+        variable LV    : unsigned(3 downto 0);                -- Current Level
+        variable ROUND : unsigned(3 downto 0);                -- current Round
+    begin
+        if RESET='1' then
+            STATE := START;
+        elsif CLK'event and CLK='1' then
+            -- STATE-TRANSITION-FUNCTION
+            case STATE is
+                when START =>
+                    lv := to_unsigned(1, 4); -- variable assignment
+                    round := to_unsigned(0, 4); -- variable assignment
+                    if((KEY1='1')) then
+                        STATE := PHASE1;
+                    end if;
+                when PHASE1 =>
+                    round := round + 1; -- variable assignment
+                    if((KEY2='1')) then
+                        STATE := PHASE1_1;
+                    elsif(PATTERN) then
+                        STATE := PHASE1;
+                    end if;
+                when PHASE1_1 =>
+                    Pt_s := PATTERN; -- variable assignment
+                    if((KEY1='1')) then
+                        STATE := PHASE2;
+                    end if;
+                when PHASE2 =>
+                    if(PATTERN) then
+                        STATE := PHASE2;
+                    elsif((KEY2='1')) then
+                        STATE := PHASE3;
+                    elsif((TIMEOVER='0')) then
+                        STATE := ENDE;
+                    end if;
+                when PHASE3 =>
+                    if(PATTERN=PT_S) then
+                        STATE := PHASE3_1;
+                    elsif(PATTERN/=PT_S) then
+                        STATE := PHASE3_2;
+                    end if;
+                when ENDE =>
+                    if(LV>MAXLV) then
+                        STATE := MAX;
+                    end if;
+                when PHASE3_1 =>
+                    lv := lv + 1; -- variable assignment
+                    if(ROUND<5 and LV<=5) then
+                        STATE := PHASE1;
+                    elsif(ROUND=5 or LV>5) then
+                        STATE := ENDE;
+                    end if;
+                when PHASE3_2 =>
+                    lv := lv - 1; -- variable assignment
+                    if(LV>0) then
+                        STATE := PHASE1;
+                    elsif(LV=0 or ROUND=5) then
+                        STATE := ENDE;
+                    end if;
+                when MAX =>
+                    maxLv := LV + 0; -- variable assignment
+                    if(true) then
+                        STATE := ENDE;
+                    end if;
+                when others =>
+                    STATE := START;
+            end case;
+        end if;
+        -- OUTPUT-FUNCTION
+        case STATE is
+                when START =>
                     TIMERSTART  <= '0';
-                    LEVEL       <= to_unsigned(0,4);
-                    PATT_RED    <= PATTERN;
-                    PATT_GREEN  <= PATTERN;
+                    LEVEL       <= LV;
+                    PATT_RED    <= "0000";
+                    PATT_GREEN  <= "0000";
                     KEYNO       <= to_unsigned(1,4);
                     NEXTPATTERN <= '0';
                     MODEPATTERN <= '0';
-                    ROUNDDISP   <= to_unsigned(1,4);
+                    ROUNDDISP   <= to_unsigned(0,4);
+                when PHASE1 =>
+                    TIMERSTART  <= '0';
+                    LEVEL       <= LV;
+                    PATT_RED    <= "0000";
+                    PATT_GREEN  <= PATTERN;
+                    KEYNO       <= to_unsigned(2,4);
+                    NEXTPATTERN <= '1';
+                    MODEPATTERN <= '0';
+                    ROUNDDISP   <= ROUND;
+                when PHASE1_1 =>
+                    TIMERSTART  <= '0';
+                    LEVEL       <= LV;
+                    PATT_RED    <= "0000";
+                    PATT_GREEN  <= PT_S;
+                    KEYNO       <= to_unsigned(1,4);
+                    NEXTPATTERN <= '0';
+                    MODEPATTERN <= '0';
+                    ROUNDDISP   <= ROUND;
+                when PHASE2 =>
+                    TIMERSTART  <= '1';
+                    LEVEL       <= LV;
+                    PATT_RED    <= PATTERN;
+                    PATT_GREEN  <= PT_S;
+                    KEYNO       <= to_unsigned(2,4);
+                    NEXTPATTERN <= '1';
+                    MODEPATTERN <= '1';
+                    ROUNDDISP   <= ROUND;
+                when PHASE3 =>
+                    TIMERSTART  <= '0';
+                    LEVEL       <= LV;
+                    PATT_RED    <= PATTERN;
+                    PATT_GREEN  <= PT_S;
+                    KEYNO       <= to_unsigned(0,4);
+                    NEXTPATTERN <= '0';
+                    MODEPATTERN <= '0';
+                    ROUNDDISP   <= ROUND;
+                when ENDE =>
+                    TIMERSTART  <= '0';
+                    LEVEL       <= MAXLV;
+                    PATT_RED    <= "0000";
+                    PATT_GREEN  <= "0000";
+                    KEYNO       <= to_unsigned(0,4);
+                    NEXTPATTERN <= '0';
+                    MODEPATTERN <= '0';
+                    ROUNDDISP   <= to_unsigned(0,4);
+                when PHASE3_1 =>
+                    TIMERSTART  <= '0';
+                    LEVEL       <= LV;
+                    PATT_RED    <= PATTERN;
+                    PATT_GREEN  <= PT_S;
+                    KEYNO       <= to_unsigned(0,4);
+                    NEXTPATTERN <= '0';
+                    MODEPATTERN <= '0';
+                    ROUNDDISP   <= ROUND;
+                when PHASE3_2 =>
+                    TIMERSTART  <= '0';
+                    LEVEL       <= LV;
+                    PATT_RED    <= PATTERN;
+                    PATT_GREEN  <= PT_S;
+                    KEYNO       <= to_unsigned(0,4);
+                    NEXTPATTERN <= '0';
+                    MODEPATTERN <= '0';
+                    ROUNDDISP   <= ROUND;
+                when MAX =>
+                    TIMERSTART  <= '0';
+                    LEVEL       <= MAXLV;
+                    PATT_RED    <= "0000";
+                    PATT_GREEN  <= "0000";
+                    KEYNO       <= to_unsigned(0,4);
+                    NEXTPATTERN <= '0';
+                    MODEPATTERN <= '0';
+                    ROUNDDISP   <= to_unsigned(0,4);
+            end case;
+    end process;
+
 end BEHAVE;
