@@ -54,6 +54,7 @@ begin
                 when START =>
                     lv := to_unsigned(1, 4); -- variable assignment
                     round := to_unsigned(0, 4); -- variable assignment
+                    maxLv := to_unsigned(0, 4); -- variable assignment
                     if((KEY1='1')) then
                         STATE := PHASE1;
                     end if;
